@@ -8,7 +8,7 @@ $$\delta(\mathbf{r})=\left \{ \begin{aligned} &\infin \quad |\mathbf{r}|=0 \\ &0
 
 $\qquad$狄拉克函数为广义函数，无法进行数值积分。我们可以定义一个连续核函数来近似狄拉克函数的过程。一个自然的想法是利用$\sigma$很小的高斯函数，但由于高斯函数需要积分整个R空间，也不适合进行数值积分。我们将光滑核函数定义为$W(\mathbf{r},h)$，其中$\mathbf{r}$为向量差，$h$为平滑半径。
 
-$$\begin{aligned}A(\mathbf{x})&\approx(A*W)(\mathbf{x})\\ &=\int{A(\mathbf{x'})W(\mathbf{x}-\mathbf{x'}, h)}dv' \end{aligned}$$
+$$\begin{aligned}A(\mathbf{x})&\approx(A*W)(\mathbf{x})\\ &=\int{A(\mathbf{x'})W(\mathbf{x}-\mathbf{x'}, h)}\mathrm{d}v' \end{aligned}$$
 
 
 $\qquad$光滑核函数满足如下条件：
