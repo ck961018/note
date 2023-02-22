@@ -17,16 +17,16 @@
 ## 3.IBL
 > &emsp;&emsp;基于图像的光照（Image based lighting）是一种基于预处理加速图像光照渲染的方法。
 > &emsp;&emsp;首先列出反射方程：
-> $$L_o(p,w_o)=\int_{\Omega}(k_d\frac{c}{\pi}+k_s(F)\frac{DG}{4(n\cdot w_i)(n\cdot w_o)})L_i(p,w_i)(n\cdot w_i)\mathrm{d}w_i$$
+> $$L_o(p,w_o)=\int_{\Omega}(k_d\frac{c}{\pi}+k_s(F)\frac{DG}{4(n\cdot w_i)(n\cdot w_o)})L_i(p,w_i)(n\cdot w_i)\,\mathrm{d}w_i$$
 > + #### 漫反射部分
-> &emsp;&emsp;对于反射方程中的漫反射项，可以将常数项移出积分：$L_o(p,w_o)=k_d\frac{c}{\pi}\int_{\Omega}L_i(p,w_i)(n\cdot w_i)\mathrm{d}w_i$。当处理天空盒时，默认处于中心，可以忽略位置信息，因此，只需要考虑$L(n)=\int_{\Omega}L_i(w_i)(n\cdot w_i)\mathrm{d}w_i$。于是，我们保存一张cubemap，记录法线对应的$L(n)$，使用时直接查询即可。
-> &emsp;&emsp;利用蒙特卡洛采样计算积分，假设均匀漫反射，则$L(n)=\int_{\Omega}L_i(w_i)(n\cdot w_i)\mathrm{d}w_i=\frac{1}{n1\cdot n2}\sum_{m=0}^{n1}\sum_{n=0}^{n2}L_i(\phi_m,\theta_n)sin\theta_n cos\theta_n$
+> &emsp;&emsp;对于反射方程中的漫反射项，可以将常数项移出积分：$L_o(p,w_o)=k_d\frac{c}{\pi}\int_{\Omega}L_i(p,w_i)(n\cdot w_i)\,\mathrm{d}w_i$。当处理天空盒时，默认处于中心，可以忽略位置信息，因此，只需要考虑$L(n)=\int_{\Omega}L_i(w_i)(n\cdot w_i)\,\mathrm{d}w_i$。于是，我们保存一张cubemap，记录法线对应的$L(n)$，使用时直接查询即可。
+> &emsp;&emsp;利用蒙特卡洛采样计算积分，假设均匀漫反射，则$L(n)=\int_{\Omega}L_i(w_i)(n\cdot w_i)\,\mathrm{d}w_i=\frac{1}{n1\cdot n2}\sum_{m=0}^{n1}\sum_{n=0}^{n2}L_i(\phi_m,\theta_n)sin\theta_n cos\theta_n$
 > + #### 镜面反射部分
 > &emsp;&emsp;对于镜面反射，需要先利用split sum近似将$L_i$项移出积分:
-> $$L_o(w_o)\approx\frac{\int_\Omega L_i(w_i)dw_i}{\int_\Omega dw_i}\int_\Omega f_s(w_i)(n\cdot w_i)\mathrm{d}w_i$$
+> $$\int f_x\cdot g_x\,\mathrm{d}x\approx\frac{\int f_x\,\mathrm{d}x}{\int\,\mathrm{d}x}\int_\Omega g_x\,\mathrm{d}w_i$$
 > &emsp;&emsp;该近似成立的条件是支撑域较小且某一被积项光滑。
-> &emsp;&emsp;在镜面反射中，计算积分不能用均匀的蒙特卡洛采样，而要考虑重要性采样，可以用法线分布函数（Normal Distribution Function）作为分布函数。又考虑到复杂度，假设观察视角方向等于法线方向$(w_o=n)$。由于这个假设，我们又需要为不同角度设置不同权重$W(w_i)$。再经过一些近似，最终式子如下：
-> $$L_o(w_o)\approx\frac{\sum_k^N L_i(w_i^k)W(w_i^k)}{\sum_k^NW(w_i^k)}\int_\Omega f_s(w_i)(n\cdot w_i)\mathrm{d}w_i$$
+> &emsp;&emsp;在镜面反射中，计算积分不能用均匀的蒙特卡洛采样，而要考虑重要性采样，可以用法线分布函数（Normal Distribution Function）作为分布函数。又考虑到复杂度，假设观察视角方向等于法线方向$(w_o=n)$。由于这个假设，我们又需要为不同角度设置不同权重，将$(n\cdot w_i)\,\mathrm{d}w_i$看作一个整体微分变量，最终式子如下：
+> $$L_o(w_o)\approx\frac{\sum_k^N L_i(w_i^k)(n\cdot w_i^k)}{\sum_k^N(n\cdot w_i^k)}\int_\Omega f_s(w_i)(n\cdot w_i)\,\mathrm{d}w_i$$
 > &emsp;&emsp;这样，左半部分就可以算出来了。右半部分可以考虑把菲涅尔方程中的$F_0$移出积分：
-> $$\begin{aligned}\int_\Omega f_s(w_i)(n\cdot w_i)\mathrm{d}w_i&=\int_\Omega \frac{f_s(w_i)}{F}(F_0+(1-F_0)(1-w_o\cdot h)^5)(n\cdot w_i)\mathrm{d}w_i\\ &=F_0\int_\Omega \frac{f_s(w_i)}{F}(1-(1-w_o\cdot h)^5)(n\cdot w_i)\mathrm{d}w_i\\ &\quad+ \int_\Omega \frac{f_s(w_i)}{F}(1-w_o\cdot h)^5(n\cdot w_i)\mathrm{d}w_i\\ &=F_0\ast scale + bias \end{aligned}$$
+> $$\begin{aligned}\int_\Omega f_s(w_i)(n\cdot w_i)\,\mathrm{d}w_i&=\int_\Omega \frac{f_s(w_i)}{F}(F_0+(1-F_0)(1-w_o\cdot h)^5)(n\cdot w_i)\,\mathrm{d}w_i\\ &=F_0\int_\Omega \frac{f_s(w_i)}{F}(1-(1-w_o\cdot h)^5)(n\cdot w_i)\,\mathrm{d}w_i\\ &\quad+ \int_\Omega \frac{f_s(w_i)}{F}(1-w_o\cdot h)^5(n\cdot w_i)\,\mathrm{d}w_i\\ &=F_0\ast scale + bias \end{aligned}$$
 > &emsp;&emsp;$scale$与$bias$同样根据以法线分布函数为分布的重要性采样来计算，过程中可以约去D项，只需要记录角度和粗糙度为维度的LUT二维贴图即可。
